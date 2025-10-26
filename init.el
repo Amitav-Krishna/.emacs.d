@@ -300,5 +300,7 @@
 (gptel-make-deepseek "DeepSeek"       ;Any name you want
   :stream t                           ;for streaming responses
   :key deepseek-api-key)               ;can be a function that returns the key
+;;; actual API key is in secrets.el which is in the .giignore so that I don't get pwned
+;;; init.el ends here
 
 
