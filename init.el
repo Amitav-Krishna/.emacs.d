@@ -4,82 +4,6 @@
 	     '("melpa" . "http://melpa.org/packages/") t)
 (package-initialize)
 ;; Everything should go after this
-(use-package ein
-  :ensure t)
-(use-package jupyter
-  :ensure t)
-(require 'ob-python)
-(require 'ob-jupyter)
-
-
-
-(unless (package-installed-p 'org-roam)
-  (package-refresh-contents)
-  (package-install 'org-roam))
-(use-package org-roam
-  :ensure t
-  :custom
-  (org-roam-directory "~/org/roam/notes/")
-  :bind (("C-c n l" . org-roam-buffer-toggle)
-         ("C-c n f" . org-roam-node-find)
-         ("C-c n i" . org-roam-node-insert))
-  :config
-  (org-roam-setup))
-
-(use-package lsp-mode
-  :ensure t
-  :hook ((c++-mode . lsp)
-         (c-mode . lsp))
-  :commands lsp)
-(use-package company
-  :ensure t
-  :hook (after-init . global-company-mode))
-(use-package flycheck
-  :ensure t
-  :init (global-flycheck-mode))
-(use-package lsp-ui
-  :ensure t
-  :commands lsp-ui-mode
-  :hook (lsp-mode . lsp-ui-mode))
-(use-package lsp-treemacs
-  :ensure t
-  :after lsp)
-(use-package pdf-tools
-  :ensure t
-  :config (pdf-tools-install))
-
-(use-package counsel
-  :ensure t
-  :after ivy
-  :config (counsel-mode 1))
-
-(use-package swiper
-  :ensure t
-  :after ivy)
-
-(use-package ivy
-  :ensure t
-  :diminish
-  :bind (("C-s" . swiper)               ;; search in buffer
-         ("M-x" . counsel-M-x)          ;; better M-x
-         ("C-x C-f" . counsel-find-file) ;; better file finder
-         ("C-x b" . ivy-switch-buffer))
-  :config
-  (ivy-mode 1)
-  (setq ivy-use-virtual-buffers t
-        ivy-count-format "(%d/%d) "
-        enable-recursive-minibuffers t))
-(use-package ivy-bibtex
-  :ensure t
-  :after ivy
-  :config
-  ;; Set the path to your .bib file
-  (setq bibtex-completion-bibliography '("~/books/references.bib")
-        bibtex-completion-library-path '("~/books/")
-        bibtex-completion-notes-path "~/org/roam/notes/"
-        bibtex-completion-pdf-field "file")
-  ;; Optional: use ivy for completion
-  (setq ivy-bibtex-default-action 'ivy-bibtex-open-any))
 
 (setq org-noter-notes-search-path '("/home/amitav/org/roam/notes")
       org-noter-create-notes-file-if-missing t
@@ -164,6 +88,9 @@
   (insert "\n")
     (insert-text-button "Notes"
                      'action (lambda (_) (find-file "~/org/notes/")))
+    (insert "\n")
+      (insert-text-button "references.bib"
+                     'action (lambda (_) (find-file "~/books/references.bib")))
   (insert "\n")
   
   (insert-text-button "Programming"
@@ -207,6 +134,13 @@
     (goto-char (point-min))
     (when (search-forward "Programming" nil t)
       (beginning-of-line))))
+(defun my/dashboard-goto-references ()
+  (interactive)
+  (when (string= (buffer-name) "*dashboard*")
+    (goto-char (point-min))
+    (when (search-forward "references.bib" nil t)
+      (beginning-of-line))))
+
 (defun my/dashboard-goto-captures ()
   (interactive)
   (when (string= (buffer-name) "*dashboard*")
@@ -219,6 +153,7 @@
 (defvar my-dashboard-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "i") 'my/dashboard-goto-init_file)
+    (define-key map (kbd "r") 'my/dashboard-goto-references)
     (define-key map (kbd "b") 'my/dashboard-goto-blogs)
     (define-key map (kbd "p") 'my/dashboard-goto-programming)
     (define-key map (kbd "n") 'my/dashboard-goto-notes)
@@ -272,8 +207,98 @@
  ;; If there is more than one, they won't work right.
  '(org-agenda-files '("~/notes/calendar.org"))
  '(package-selected-packages
-   '(code-cells company counsel ein flycheck htmlize ivy-bibtex jupyter
-		latex-table-wizard lsp-treemacs lsp-ui magit org-noter
-		org-roam org-roam-ui pdf-tools polymode projectile)))
+   '(code-cells company counsel ein flycheck gptel htmlize ivy-bibtex
+		jupyter latex-table-wizard lsp-treemacs lsp-ui magit
+		org-noter org-roam-ui pdf-tools projectile subed vterm)))
 
 (global-set-key (kbd "C-c b") 'ivy-bibtex)
+
+
+
+;; Packages
+(use-package deferred :ensure t)
+(use-package request :ensure t)
+(use-package ein
+  :ensure t)
+(use-package polymode
+  :ensure t)
+(use-package jupyter
+  :ensure t)
+(require 'ob-python)
+(require 'ob-jupyter)
+(use-package lsp-mode
+  :ensure t
+  :hook ((c++-mode . lsp)
+         (c-mode . lsp))
+  :commands lsp)
+(use-package company
+  :ensure t
+  :hook (after-init . global-company-mode))
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode))
+(use-package lsp-ui
+  :ensure t
+  :commands lsp-ui-mode
+  :hook (lsp-mode . lsp-ui-mode))
+(use-package lsp-treemacs
+  :ensure t
+  :after lsp)
+(use-package pdf-tools
+  :ensure t
+  :config (pdf-tools-install))
+
+(use-package counsel
+  :ensure t
+  :after ivy
+  :config (counsel-mode 1))
+
+(use-package swiper
+  :ensure t
+  :after ivy)
+
+(use-package ivy
+  :ensure t
+  :diminish
+  :bind (("C-s" . swiper)               ;; search in buffer
+         ("M-x" . counsel-M-x)          ;; better M-x
+         ("C-x C-f" . counsel-find-file) ;; better file finder
+         ("C-x b" . ivy-switch-buffer))
+  :config
+  (ivy-mode 1)
+  (setq ivy-use-virtual-buffers t
+        ivy-count-format "(%d/%d) "
+        enable-recursive-minibuffers t))
+(use-package ivy-bibtex
+  :ensure t
+  :after ivy
+  :config
+  ;; Set the path to your .bib file
+  (setq bibtex-completion-bibliography '("~/books/references.bib")
+        bibtex-completion-library-path '("~/books/")
+        bibtex-completion-notes-path "~/org/roam/notes/"
+        bibtex-completion-pdf-field "file")
+  ;; Optional: use ivy for completion
+  (setq ivy-bibtex-default-action 'ivy-bibtex-open-any))
+
+
+
+(unless (package-installed-p 'org-roam)
+  (package-refresh-contents)
+  (package-install 'org-roam))
+(use-package org-roam
+  :ensure t
+  :custom
+  (org-roam-directory "~/org/roam/notes/")
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert))
+  :config
+  (org-roam-setup))
+(use-package gptel)
+(load (expand-file-name "secrets.el" user-emacs-directory) t)
+(gptel-make-deepseek "DeepSeek"       ;Any name you want
+  :stream t                           ;for streaming responses
+  :key deepseek-api-key)               ;can be a function that returns the key
+
+
