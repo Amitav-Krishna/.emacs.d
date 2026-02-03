@@ -1,3 +1,5 @@
 *
 !.gitignore
 !init.el
+bookmarks
+org-roam.db
