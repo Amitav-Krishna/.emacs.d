@@ -1,200 +1,111 @@
-(require 'org-element)
+;;; init.el --- Minimal Emacs config -*- lexical-binding: t; -*-
+
+;; Package setup
 (require 'package)
-(add-to-list 'package-archives
-	     '("melpa" . "http://melpa.org/packages/") t)
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("gnu" . "https://elpa.gnu.org/packages/")))
 (package-initialize)
-;; Everything should go after this
+(unless package-archive-contents
+  (package-refresh-contents))
 
-(setq org-noter-notes-search-path '("/home/amitav/org/roam/notes")
-      org-noter-create-notes-file-if-missing t
-      org-noter-always-create-notes-file t
-      org-noter-notes-window-location 'horizontal-split)
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
 
-(use-package org-noter
-  :after org
+(require 'use-package)
+(setq use-package-always-ensure t)
+
+;; --- Vertico + Consult (Telescope-like) ---
+(use-package vertico
+  :init
+  (vertico-mode))
+
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles partial-completion)))))
+
+(use-package marginalia
+  :init
+  (marginalia-mode))
+
+(use-package consult
+  :bind (("C-x b" . consult-buffer)
+         ("C-c f" . consult-find)
+         ("C-c g" . consult-ripgrep)
+         ("C-c s" . consult-line))
+  :custom
+  (consult-preview-key "M-."))
+
+;; --- Org-roam ---
+(use-package org-roam
+  :custom
+  (org-roam-directory "~/org/roam/notes/")
+  (org-roam-completion-everywhere t)
+  :bind (("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n c" . org-roam-capture))
   :config
-  (setq org-noter-notes-search-path '("/home/amitav/org/roam/notes")
-        org-noter-create-notes-file-if-missing t
-        org-noter-auto-save-last-location t))
+  (org-roam-db-autosync-mode))
 
+;; --- LSP Mode + Pyright ---
+(use-package lsp-mode
+  :hook ((python-mode . lsp-deferred))
+  :commands (lsp lsp-deferred)
+  :bind (:map lsp-mode-map
+         ("C-c d" . lsp-find-definition)
+         ("C-c r" . lsp-find-references))
+  :custom
+  (lsp-keymap-prefix "C-c l")
+  (lsp-idle-delay 0.5)
+  (lsp-log-io nil))
 
-(setq enabled-option t
-      disabled-option nil
+(use-package lsp-ui
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-doc-enable t)
+  (lsp-ui-doc-position 'at-point)
+  (lsp-ui-sideline-show-diagnostics t))
 
-      enabled-mode 1
-      disabled-mode 0)
+;; Diagnostic navigation
+(global-set-key (kbd "C-c e") 'flymake-show-buffer-diagnostics)
+(global-set-key (kbd "M-n") 'flymake-goto-next-error)
+(global-set-key (kbd "M-p") 'flymake-goto-prev-error)
 
-(setq inhibit-startup-screen t)
+(use-package lsp-pyright
+  :hook (python-mode . (lambda ()
+                         (require 'lsp-pyright)
+                         (lsp-deferred)))
+  :custom
+  (lsp-pyright-typechecking-mode "strict"))
 
-(defun my/get-org (file)
-  "Return a list of items from an org-mode file."
-  (with-temp-buffer
-    (insert-file-contents file)
+;; --- Vterm ---
+(use-package vterm
+  :bind ("C-c t" . vterm)
+  :custom
+  (vterm-max-scrollback 10000))
 
-    (let (items)
-      (org-element-map (org-element-parse-buffer) 'headline
-          
-        (lambda (hl)
-          (let* ((title (org-element-property :raw-value hl))
-                 (content (org-element-interpret-data (org-element-contents hl)))
-		 (bold-title (propertize title 'face 'bold)))
-	    
-            (push (format "*%s*\n\n%s" bold-title (string-trim content)) items))))
-      (nreverse items))))
+;; --- Magit ---
+(use-package magit
+  :bind ("C-x g" . magit-status))
 
-(defun my/get-daily-quote (file)
-  "Return the same quote for each day from FILE, or a fallback message."
-  (let ((quotes (my/get-org file)))
-    (if (null quotes)
-        (with-temp-buffer
-	  (insert-file-contents file)
-	  (buffer-string))
-      (let* ((day-num (string-to-number (format-time-string "%j"))) ;; 1–366
-             (index (% day-num (length quotes))))
-        (nth index quotes)))))
-
-(defun my-dashboard ()
-  "Show a simple hello world dashboard with a daily quote."
-  (switch-to-buffer "*dashboard*")
-  (erase-buffer)
-
-
-  (insert "------------------------------------------------\n")
-  (insert "  This is ")
-  "Rainbow Amitav Krishna"
-  (let* ((name "Amitav Krishna")
-	 
-	 (colors ["red" "orange" "yellow" "cyan"]))
-	 (dotimes (i (length name))
-	   (let ((char (substring name i (1+ i)))
-		 (color (aref colors (% i (length colors)))))
-	     (insert (propertize char 'face `(:foreground ,color))))))
-
-  (insert "\'s Emacs dashboard\n")	;
-	 
-
-  (insert "------------------------------------------------\n\n")
-
-  (insert-text-button "Quote"
-		      `action (lambda (_) (find-file"~/org/notes/Quotes.org")))
-  (insert " of the day:\n\n")
-  (insert (my/get-daily-quote "~/org/notes/Quotes.org"))
-  (insert "\n\n")
-
-
-  (insert "Quick links:\n")
-  (insert-text-button "Init file"
-                     'action (lambda (_) (find-file user-init-file)))
-  (insert "\n")
-    (insert-text-button "Notes"
-                     'action (lambda (_) (find-file "~/org/notes/")))
-    (insert "\n")
-      (insert-text-button "references.bib"
-                     'action (lambda (_) (find-file "~/books/references.bib")))
-  (insert "\n")
-  
-  (insert-text-button "Programming"
-                      'action (lambda (_) (find-file "~/codage")))
-  (insert "\n")
-  (insert-text-button "Blogs"
-                      'action (lambda (_) (find-file "~/blogs")))
-  (insert "\n")
-  (insert-text-button "Captures"
-                      'action (lambda (_) (find-file "~/org/notes/capture.org")))
-  (insert "\n")
-  (my-dashboard-mode 1)
-  
-
-  ;; Finish
-  (goto-char (point-min))
-
-  (setq truncate-lines nil)
-  (read-only-mode 1))
-(defun my/dashboard-goto-init_file ()
-  (interactive)
-  (when (string= (buffer-name) "*dashboard*")
-    (goto-char (point-min))
-    (when (search-forward "Init file" nil t)
-      (beginning-of-line))))
-(defun my/dashboard-goto-blogs ()
-  (interactive)
-  (when (string= (buffer-name) "*dashboard*")
-    (goto-char (point-min))
-    (when (search-forward "Blogs" nil t)
-      (beginning-of-line))))
-(defun my/dashboard-goto-notes ()
-  (interactive)
-  (when (string= (buffer-name) "*dashboard*")
-    (goto-char (point-min))
-    (when (search-forward "Notes" nil t)
-      (beginning-of-line))))
-(defun my/dashboard-goto-programming ()
-  (interactive)
-  (when (string= (buffer-name) "*dashboard*")
-    (goto-char (point-min))
-    (when (search-forward "Programming" nil t)
-      (beginning-of-line))))
-(defun my/dashboard-goto-references ()
-  (interactive)
-  (when (string= (buffer-name) "*dashboard*")
-    (goto-char (point-min))
-    (when (search-forward "references.bib" nil t)
-      (beginning-of-line))))
-
-(defun my/dashboard-goto-captures ()
-  (interactive)
-  (when (string= (buffer-name) "*dashboard*")
-    (goto-char (point-min))
-    (when (search-forward "Captures" nil t)
-      (beginning-of-line))))
-
-
-
-(defvar my-dashboard-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "i") 'my/dashboard-goto-init_file)
-    (define-key map (kbd "r") 'my/dashboard-goto-references)
-    (define-key map (kbd "b") 'my/dashboard-goto-blogs)
-    (define-key map (kbd "p") 'my/dashboard-goto-programming)
-    (define-key map (kbd "n") 'my/dashboard-goto-notes)
-    (define-key map (kbd "c") 'my/dashboard-goto-captures)
-    map)
-  "Keymap for `my-dashboard-mode'.")
-
-(define-minor-mode my-dashboard-mode
-  "Minor mode for my custom Emacs dashboard."
-  :keymap my-dashboard-mode-map
-  :init-value nil
-  (read-only-mode 1))
-
-(add-hook 'emacs-startup-hook 'my-dashboard)
-
-;; UI cleanup
-(tool-bar-mode 0)
-(scroll-bar-mode 0)
-(menu-bar-mode 0)
-(blink-cursor-mode 0)
-(add-to-list 'default-frame-alist '(background-color . "#282A36"))
-(add-to-list 'default-frame-alist '(foreground-color . "#F0EAD6"))
-(add-to-list 'default-frame-alist '(font . "Monospace-8"))
-(display-time-mode 1)
-(set-frame-parameter nil 'background-color "#282A36")
-(set-frame-parameter nil 'foreground-color "#F0EAD6")
-
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (C . t)
-   (python . t)
-   (jupyter . t)))
-
-
+;;; init.el ends here
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   '(org-roam-ui magit vterm lsp-pyright lsp-ui lsp-mode org-roam)))
+>>>>>>> fc6b599 (First commit from new device)
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+<<<<<<< HEAD
 (setq-default truncate-lines nil)
 (define-key org-mode-map (kbd "C-u C-c C-l") 'org-toggle-link-display)
 (flyspell-mode 1)

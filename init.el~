@@ -1,0 +1,100 @@
+;;; init.el --- Minimal Emacs config -*- lexical-binding: t; -*-
+
+;; Package setup
+(require 'package)
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("gnu" . "https://elpa.gnu.org/packages/")))
+(package-initialize)
+(unless package-archive-contents
+  (package-refresh-contents))
+
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
+(setq use-package-always-ensure t)
+
+;; --- Vertico + Consult (Telescope-like) ---
+(use-package vertico
+  :init
+  (vertico-mode))
+
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles partial-completion)))))
+
+(use-package marginalia
+  :init
+  (marginalia-mode))
+
+(use-package consult
+  :bind (("C-x b" . consult-buffer)
+         ("C-c f" . consult-find)
+         ("C-c g" . consult-ripgrep)
+         ("C-c s" . consult-line))
+  :custom
+  (consult-preview-key "M-."))
+
+;; --- Org-roam ---
+(use-package org-roam
+  :custom
+  (org-roam-directory "~/org/roam/notes/")
+  (org-roam-completion-everywhere t)
+  :bind (("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n c" . org-roam-capture))
+  :config
+  (org-roam-db-autosync-mode))
+
+;; --- LSP Mode + Pyright ---
+(use-package lsp-mode
+  :hook ((python-mode . lsp-deferred))
+  :commands (lsp lsp-deferred)
+  :bind (:map lsp-mode-map
+         ("C-c d" . lsp-find-definition)
+         ("C-c r" . lsp-find-references))
+  :custom
+  (lsp-keymap-prefix "C-c l")
+  (lsp-idle-delay 0.5)
+  (lsp-log-io nil))
+
+(use-package lsp-ui
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-doc-enable t)
+  (lsp-ui-doc-position 'at-point))
+
+(use-package lsp-pyright
+  :hook (python-mode . (lambda ()
+                         (require 'lsp-pyright)
+                         (lsp-deferred)))
+  :custom
+  (lsp-pyright-typechecking-mode "strict"))
+
+;; --- Vterm ---
+(use-package vterm
+  :bind ("C-c t" . vterm)
+  :custom
+  (vterm-max-scrollback 10000))
+
+;; --- Magit ---
+(use-package magit
+  :bind ("C-x g" . magit-status))
+
+;;; init.el ends here
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   '(org-roam-ui magit vterm lsp-pyright lsp-ui lsp-mode org-roam)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
