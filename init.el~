@@ -1,5 +1,8 @@
 ;;; init.el --- Minimal Emacs config -*- lexical-binding: t; -*-
 
+;; Suppress native-comp warnings from third-party packages
+(setq native-comp-async-report-warnings-errors 'silent)
+
 ;; Package setup
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
@@ -65,7 +68,13 @@
   :commands lsp-ui-mode
   :custom
   (lsp-ui-doc-enable t)
-  (lsp-ui-doc-position 'at-point))
+  (lsp-ui-doc-position 'at-point)
+  (lsp-ui-sideline-show-diagnostics t))
+
+;; Diagnostic navigation
+(global-set-key (kbd "C-c e") 'flymake-show-buffer-diagnostics)
+(global-set-key (kbd "M-n") 'flymake-goto-next-error)
+(global-set-key (kbd "M-p") 'flymake-goto-prev-error)
 
 (use-package lsp-pyright
   :hook (python-mode . (lambda ()
@@ -84,6 +93,103 @@
 (use-package magit
   :bind ("C-x g" . magit-status))
 
+;; Ivy/Counsel/Swiper (required for ivy-bibtex)
+(use-package ivy
+  :ensure t
+  :diminish
+  :bind (("C-s" . swiper)
+         ("M-x" . counsel-M-x)
+         ("C-x C-f" . counsel-find-file)
+         ("C-x b" . ivy-switch-buffer))
+  :config
+  (ivy-mode 1)
+  (setq ivy-use-virtual-buffers t
+        ivy-count-format "(%d/%d) "
+        enable-recursive-minibuffers t))
+
+(use-package counsel
+  :ensure t
+  :after ivy
+  :config (counsel-mode 1))
+
+(use-package swiper
+  :ensure t
+  :after ivy)
+
+;; Additional settings from old config
+(setq-default truncate-lines nil)
+(with-eval-after-load 'org
+  (define-key org-mode-map (kbd "C-u C-c C-l") 'org-toggle-link-display))
+(flyspell-mode 1)
+(setq org-confirm-babel-evaluate nil)
+
+;; Slideshow export - only export content tagged with :slides:
+(setq org-export-select-tags '("slides"))
+
+;; BibTeX configuration
+(use-package ivy-bibtex
+  :ensure t
+  :after ivy
+  :config
+  (setq bibtex-completion-bibliography '("~/books/references.bib")
+        bibtex-completion-library-path '("~/books/")
+        bibtex-completion-notes-path "~/org/roam/notes/"
+        bibtex-completion-pdf-field "file")
+  (setq ivy-bibtex-default-action 'ivy-bibtex-open-any))
+
+(global-set-key (kbd "C-c b") 'ivy-bibtex)
+
+;; Python code blocks (no Jupyter needed for basic use)
+(with-eval-after-load 'org
+  (require 'ob-python))
+
+;; C/C++ LSP (already loaded for Python above, just add hooks)
+(add-hook 'c++-mode-hook #'lsp)
+(add-hook 'c-mode-hook #'lsp)
+
+;; Company mode for completions
+(use-package company
+  :ensure t
+  :hook (after-init . global-company-mode))
+
+;; Flycheck
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode))
+
+;; Treemacs
+(use-package lsp-treemacs
+  :ensure t
+  :after lsp)
+
+;; PDF Tools
+(use-package pdf-tools
+  :ensure t
+  :config (pdf-tools-install))
+
+;; --- Org-reveal (slideshows) ---
+(use-package ox-reveal
+  :ensure t
+  :demand t
+  :after org
+  :config
+  (require 'ox-reveal)
+  :custom
+  (org-reveal-root "https://cdn.jsdelivr.net/npm/reveal.js@4.5.0")
+  (org-reveal-mathjax t))
+
+;; --- empv (mpv media player) ---
+(use-package empv
+  :ensure t
+  :bind-keymap ("C-c m" . empv-map))
+
+;; --- Telega (Telegram client) ---
+(use-package telega
+  :commands telega)
+
+(require 'exwm)
+(setq exwm-input-global-keys `(([?\s-r] . exwm-reset)))
+(exwm-wm-mode)
 ;;; init.el ends here
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -91,7 +197,8 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(org-roam-ui magit vterm lsp-pyright lsp-ui lsp-mode org-roam)))
+   '(empv popup synosaurus exwm ox-reveal code-cells company counsel flycheck htmlize ivy-bibtex lsp-pyright lsp-treemacs lsp-ui magit marginalia orderless org-roam pdf-tools subed swiper vertico vterm)))
+
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
